@@ -1,0 +1,15 @@
+[package]
+name = "simple-clickhouse-codegen"
+description = "A macro for deriving simple-clickhouse::RowBinary"
+authors = ["Michl Steglich <cargo@greaka.de>"]
+version = "0.1.0"
+edition = "2021"
+license = "MIT OR Apache-2.0"
+
+[lib]
+proc-macro = true
+
+[dependencies]
+proc-macro2 = "1"
+syn = "1"
+quote = "1"

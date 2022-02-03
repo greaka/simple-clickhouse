@@ -1,0 +1,24 @@
+[package]
+name = "simple-clickhouse"
+authors = ["Michl Steglich <cargo@greaka.de>"]
+version = "0.1.0"
+edition = "2021"
+license = "MIT OR Apache-2.0"
+
+[dependencies]
+futures = "0.3"
+leb128 = "0.2"
+chrono = "0.4"
+
+[dependencies.simple-clickhouse-codegen]
+version = "0.1"
+path = "../codegen"
+
+[dependencies.hyper]
+version = "0.14"
+features = ["client", "http1", "stream", "tcp"]
+
+[dependencies.tokio]
+version = "1"
+default-features = false
+features = ["rt"]
