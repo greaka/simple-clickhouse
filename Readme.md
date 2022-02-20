@@ -43,7 +43,6 @@ async fn send() {
     inserter.send(snap).await.ok();
 }
 ```
-This library is capable of inserting partial rows as long as clickhouse has
-a default argument set.
+This library is capable of inserting partial rows as long as the missing columns have a default set.
 
 Not many types are implemented currently, neither is anything gated behind features, but feel free to create a PR.

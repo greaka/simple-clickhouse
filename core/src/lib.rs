@@ -43,20 +43,22 @@
 //!     inserter.send(snap).await.ok();
 //! }
 //! ```
-//! This library is capable of inserting partial rows as long as clickhouse has
-//! a default argument set.
+//! This library is capable of inserting partial rows as long as the missing
+//! columns have a default set.
 
 use std::time::Duration;
 
 use futures::{channel::mpsc::UnboundedSender, stream::iter, StreamExt};
-use hyper::{client::HttpConnector, Body, Request};
+use hyper::{client::HttpConnector, header::HeaderValue, Body, Request};
 pub use simple_clickhouse_codegen::RowBinary;
 use tokio::{pin, time::interval};
 
 #[derive(Debug)]
 pub struct Client {
-    client: hyper::Client<HttpConnector>,
-    host:   String,
+    client:   hyper::Client<HttpConnector>,
+    host:     String,
+    user:     Option<HeaderValue>,
+    password: Option<HeaderValue>,
 }
 
 impl Client {
@@ -64,7 +66,19 @@ impl Client {
         Self {
             client: hyper::Client::new(),
             host,
+            user: None,
+            password: None,
         }
+    }
+
+    pub fn authentication<V>(&mut self, user: V, password: V) -> Result<(), hyper::http::Error>
+    where
+        HeaderValue: TryFrom<V>,
+        <HeaderValue as TryFrom<V>>::Error: Into<hyper::http::Error>,
+    {
+        self.user = Some(user.try_into().map_err(Into::into)?);
+        self.password = Some(password.try_into().map_err(Into::into)?);
+        Ok(())
     }
 
     /// expects the column names in order
@@ -80,6 +94,8 @@ impl Client {
         );
         let (tx, rx) = futures::channel::mpsc::unbounded();
         let client = self.client.clone();
+        let user = self.user.clone();
+        let password = self.password.clone();
         tokio::spawn(async move {
             let mut interval = interval(Duration::from_secs(1));
             let rx = rx.map(to_vec).ready_chunks(10000);
@@ -88,7 +104,13 @@ impl Client {
             while let Some(f) = rx.next().await {
                 interval.tick().await;
 
-                let req = Request::post(&url)
+                let mut req = Request::post(&url);
+                if let (Some(user), Some(password)) = (&user, &password) {
+                    req = req.header("X-ClickHouse-User", user);
+                    req = req.header("X-ClickHouse-Key", password);
+                }
+
+                let req = req
                     .body(Body::wrap_stream(iter(f)))
                     .expect("invalid request built");
                 client.request(req).await.ok();
